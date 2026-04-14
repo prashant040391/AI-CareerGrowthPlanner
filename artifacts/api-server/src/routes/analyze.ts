@@ -229,6 +229,89 @@ IMPORTANT SALARY RULES:
 Be specific, realistic, and personalized throughout. Avoid generic advice. Base all outputs strictly on the resume content and the inputs provided.`;
 }
 
+/* ── Resume section validation endpoint ─────────────────────────────────── */
+interface SectionResult {
+  name: string;
+  present: boolean;
+  hint: string;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  sections: SectionResult[];
+  wordCount: number;
+  warnings: string[];
+}
+
+function checkResumeSections(text: string): ValidationResult {
+  const warnings: string[] = [];
+
+  const sections: SectionResult[] = [
+    {
+      name: "Contact Information",
+      present:
+        /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(text) ||
+        /(\+?\d[\d\s\-().]{7,}\d)/.test(text),
+      hint: "Include your email address and phone number",
+    },
+    {
+      name: "Work Experience",
+      present:
+        /(work\s*experience|professional\s*experience|employment|experience|worked\s*at|positions?\s*held|career\s*history|job\s*history)/i.test(text) ||
+        /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s,]+\d{4}/i.test(text),
+      hint: "Add a Work Experience section with roles, companies, and dates",
+    },
+    {
+      name: "Education",
+      present:
+        /(education|academic|qualification|university|college|degree|bachelor|master|b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?sc|m\.?sc|mba|phd|diploma|school)/i.test(text),
+      hint: "Include your educational qualifications",
+    },
+    {
+      name: "Skills",
+      present:
+        /(skills?|technical\s*skills?|core\s*competenc|proficienc|expertise|technologies|tools\s*&|stack|languages?)/i.test(text),
+      hint: "Add a Skills section listing your technical and professional skills",
+    },
+  ];
+
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount < 80) warnings.push("Resume appears very short — consider adding more detail");
+
+  const presentCount = sections.filter((s) => s.present).length;
+  const valid = presentCount >= 3;
+
+  return { valid, sections, wordCount, warnings };
+}
+
+router.post("/validate-resume", upload.single("resume"), async (req, res): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+  if (req.file.size === 0) {
+    res.status(400).json({ error: "Uploaded file is empty" });
+    return;
+  }
+
+  let text = "";
+  try {
+    text = await extractTextFromFile(req.file.buffer, req.file.mimetype);
+  } catch {
+    res.status(400).json({ error: "Could not read the file. Please upload a valid PDF or Word document." });
+    return;
+  }
+
+  if (!text || text.trim().length < 20) {
+    res.status(400).json({
+      error: "No readable text found. The file may be a scanned image or password-protected.",
+    });
+    return;
+  }
+
+  res.json(checkResumeSections(text));
+});
+
 router.post("/analyze", upload.single("resume"), async (req, res): Promise<void> => {
   const { targetRole, targetIndustry, geography } = req.body as {
     targetRole?: string;

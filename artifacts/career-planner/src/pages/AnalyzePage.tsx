@@ -146,6 +146,20 @@ const ACCEPTED_MIME = [
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 
+interface ResumeSection {
+  name: string;
+  present: boolean;
+  hint: string;
+}
+
+interface ResumeValidation {
+  checking: boolean;
+  valid: boolean | null;
+  sections: ResumeSection[];
+  warnings: string[];
+  error: string;
+}
+
 export default function AnalyzePage() {
   const [, navigate] = useLocation();
   const { setAnalysisResult } = useCareer();
@@ -162,6 +176,13 @@ export default function AnalyzePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [apiError, setApiError] = useState("");
+  const [resumeValidation, setResumeValidation] = useState<ResumeValidation>({
+    checking: false,
+    valid: null,
+    sections: [],
+    warnings: [],
+    error: "",
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -196,6 +217,30 @@ export default function AnalyzePage() {
 
     setResume(file);
     setErrors((e) => ({ ...e, resume: "" }));
+
+    // Immediately validate sections via API
+    setResumeValidation({ checking: true, valid: null, sections: [], warnings: [], error: "" });
+    const fd = new FormData();
+    fd.append("resume", file);
+    fetch(`${import.meta.env.BASE_URL}api/validate-resume`, { method: "POST", body: fd })
+      .then(async (res) => {
+        const data = await res.json() as { error?: string; valid?: boolean; sections?: ResumeSection[]; warnings?: string[] };
+        if (!res.ok || data.error) {
+          setResumeValidation({ checking: false, valid: false, sections: [], warnings: [], error: data.error ?? "Could not validate file." });
+          setErrors((e) => ({ ...e, resume: data.error ?? "Could not validate file." }));
+        } else {
+          setResumeValidation({
+            checking: false,
+            valid: data.valid ?? false,
+            sections: data.sections ?? [],
+            warnings: data.warnings ?? [],
+            error: "",
+          });
+        }
+      })
+      .catch(() => {
+        setResumeValidation({ checking: false, valid: null, sections: [], warnings: [], error: "" });
+      });
   };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -269,6 +314,7 @@ export default function AnalyzePage() {
     setGeography("India");
     setErrors({});
     setApiError("");
+    setResumeValidation({ checking: false, valid: null, sections: [], warnings: [], error: "" });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -455,11 +501,56 @@ export default function AnalyzePage() {
                 </div>
                 {errors.resume && (
                   <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     {errors.resume}
                   </p>
+                )}
+
+                {/* Live section checklist — shown immediately after upload */}
+                {resumeValidation.checking && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2.5">
+                    <span className="block w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin flex-shrink-0" />
+                    Checking resume sections…
+                  </div>
+                )}
+
+                {!resumeValidation.checking && resumeValidation.sections.length > 0 && (
+                  <div className={`mt-3 rounded-lg border px-4 py-3 ${resumeValidation.valid ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+                    <p className={`text-xs font-semibold mb-2.5 ${resumeValidation.valid ? "text-green-700" : "text-amber-700"}`}>
+                      Resume Section Check
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {resumeValidation.sections.map((s) => (
+                        <div key={s.name} className="flex items-start gap-1.5">
+                          {s.present ? (
+                            <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          <div>
+                            <span className={`text-xs font-medium ${s.present ? "text-green-700" : "text-amber-700"}`}>{s.name}</span>
+                            {!s.present && (
+                              <p className="text-xs text-amber-600 leading-tight mt-0.5">{s.hint}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {resumeValidation.warnings.map((w) => (
+                      <p key={w} className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {w}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
 
