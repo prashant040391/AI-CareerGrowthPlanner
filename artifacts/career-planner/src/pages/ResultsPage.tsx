@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useCareer } from "../context/CareerContext";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
@@ -11,6 +11,8 @@ import SalaryInsightsCard from "../components/SalaryInsightsCard";
 export default function ResultsPage() {
   const [, navigate] = useLocation();
   const { analysisResult } = useCareer();
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!analysisResult) {
@@ -25,6 +27,7 @@ export default function ResultsPage() {
   const buildSummaryText = () => {
     const lines: string[] = [
       `== PROFILE SUMMARY ==`,
+      ...(profileSummary.candidateName ? [`Candidate: ${profileSummary.candidateName}`] : []),
       `Current Role: ${profileSummary.currentRole}`,
       `Experience: ${profileSummary.yearsOfExperience}`,
       `Industry: ${profileSummary.industry}`,
@@ -64,6 +67,53 @@ export default function ResultsPage() {
       alert("Career summary copied to clipboard!");
     } catch {
       alert("Unable to copy. Please select and copy the text manually.");
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!reportRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#f9fafb",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+      let yOffset = 0;
+      let remainingHeight = imgHeight;
+
+      while (remainingHeight > 0) {
+        pdf.addImage(imgData, "PNG", 0, -yOffset, imgWidth, imgHeight);
+        remainingHeight -= pageHeight;
+        yOffset += pageHeight;
+        if (remainingHeight > 0) pdf.addPage();
+      }
+
+      const fileName = profileSummary.candidateName
+        ? `${profileSummary.candidateName.replace(/\s+/g, "_")}_Career_Report.pdf`
+        : "Career_Analysis_Report.pdf";
+
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("PDF generation failed", err);
+      alert("Could not generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -110,42 +160,89 @@ export default function ResultsPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-10">
         {/* Page Title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Your Career Analysis Report</h1>
-          <p className="text-gray-500 text-sm">
-            AI-generated results for <span className="font-semibold text-indigo-600">{careerMatch.targetRole}</span>
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Your Career Analysis Report</h1>
+            <p className="text-gray-500 text-sm">
+              AI-generated results for <span className="font-semibold text-indigo-600">{careerMatch.targetRole}</span>
+              {profileSummary.candidateName && (
+                <> &mdash; <span className="font-semibold text-gray-700">{profileSummary.candidateName}</span></>
+              )}
+            </p>
+          </div>
+          {/* Download PDF button — positioned next to the Profile Summary section */}
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            className="flex-shrink-0 flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDownloading ? (
+              <>
+                <span className="block w-4 h-4 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download PDF
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Top row: Profile + Career Match */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <ProfileSummaryCard data={profileSummary} />
-          <CareerMatchCard data={careerMatch} />
+        {/* Report content captured for PDF */}
+        <div ref={reportRef}>
+          {/* Top row: Profile + Career Match */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <ProfileSummaryCard data={profileSummary} />
+            <CareerMatchCard data={careerMatch} />
+          </div>
+
+          {/* Second row: Strengths + Skill Gaps */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <StrengthsCard strengths={strengths} />
+            <SkillGapsCard data={skillGaps} />
+          </div>
+
+          {/* Full-width Roadmap */}
+          <div className="mb-6">
+            <RoadmapCard steps={roadmap} />
+          </div>
+
+          {/* Full-width Salary */}
+          <div className="mb-6">
+            <SalaryInsightsCard data={salaryInsights} />
+          </div>
+
+          {/* Disclaimer inside PDF */}
+          <div className="text-center text-xs text-gray-400 italic border-t border-gray-200 pt-6 pb-4">
+            This is an AI-generated career planning output. Use it as a decision support guide, not as the sole basis for career decisions.
+          </div>
         </div>
 
-        {/* Second row: Strengths + Skill Gaps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <StrengthsCard strengths={strengths} />
-          <SkillGapsCard data={skillGaps} />
-        </div>
-
-        {/* Full-width Roadmap */}
-        <div className="mb-6">
-          <RoadmapCard steps={roadmap} />
-        </div>
-
-        {/* Full-width Salary */}
-        <div className="mb-8">
-          <SalaryInsightsCard data={salaryInsights} />
-        </div>
-
-        {/* Disclaimer */}
-        <div className="text-center text-xs text-gray-400 italic border-t border-gray-200 pt-6 pb-4">
-          This is an AI-generated career planning output. Use it as a decision support guide, not as the sole basis for career decisions.
-        </div>
-
-        {/* Bottom CTA */}
-        <div className="flex justify-center gap-4">
+        {/* Bottom CTAs */}
+        <div className="flex justify-center gap-4 mt-4">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            className="flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-6 py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDownloading ? (
+              <>
+                <span className="block w-4 h-4 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download PDF
+              </>
+            )}
+          </button>
           <button
             onClick={handleCopySummary}
             className="flex items-center gap-2 text-sm font-semibold border border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all"

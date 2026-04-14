@@ -27,6 +27,7 @@ const upload = multer({
 
 const MOCK_DATA = {
   profileSummary: {
+    candidateName: "Rahul Sharma",
     currentRole: "Project Coordinator",
     yearsOfExperience: "4 years",
     industry: "Operations / Energy",
@@ -145,6 +146,7 @@ Return the following JSON structure:
 
 {
   "profileSummary": {
+    "candidateName": "full name extracted from resume, or empty string if not found",
     "currentRole": "inferred current job title",
     "yearsOfExperience": "estimated years",
     "industry": "current industry",

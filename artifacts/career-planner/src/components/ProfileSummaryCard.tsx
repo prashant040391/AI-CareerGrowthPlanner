@@ -12,6 +12,14 @@ export default function ProfileSummaryCard({ data }: { data: ProfileSummary }) {
         Profile Summary
       </h2>
 
+      {/* Candidate Name */}
+      {data.candidateName && (
+        <div className="mb-4 pb-4 border-b border-gray-100">
+          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Candidate</p>
+          <p className="text-lg font-bold text-indigo-700">{data.candidateName}</p>
+        </div>
+      )}
+
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
