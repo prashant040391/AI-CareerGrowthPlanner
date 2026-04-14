@@ -46,6 +46,4 @@ export interface AnalysisFormData {
   targetRole: string;
   targetIndustry: string;
   geography: string;
-  currentSalary: string;
-  desiredSalary: string;
 }
