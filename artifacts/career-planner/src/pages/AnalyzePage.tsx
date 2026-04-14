@@ -167,12 +167,33 @@ export default function AnalyzePage() {
 
   const handleFileChange = (file: File | null) => {
     if (!file) return;
+
+    // Empty file check
+    if (file.size === 0) {
+      setErrors((e) => ({ ...e, resume: "The selected file is empty. Please upload a valid resume." }));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // Size limit (10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((e) => ({ ...e, resume: "File is too large. Please upload a file under 10 MB." }));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const isValidMime = ACCEPTED_MIME.includes(file.type);
     const isValidExt = ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
     if (!isValidMime && !isValidExt) {
-      setErrors((e) => ({ ...e, resume: "Only PDF or Word (DOC/DOCX) files are accepted" }));
+      const ext = file.name.includes(".") ? file.name.split(".").pop()?.toUpperCase() : "this";
+      setErrors((e) => ({
+        ...e,
+        resume: `"${ext}" files are not supported. Please upload a PDF (.pdf) or Word (.doc / .docx) file.`,
+      }));
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
     setResume(file);
     setErrors((e) => ({ ...e, resume: "" }));
   };
@@ -196,12 +217,45 @@ export default function AnalyzePage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!resume) newErrors.resume = "Please upload a PDF or Word resume";
-    if (!targetRole) newErrors.targetRole = "Please select a target job role";
-    if (targetRole === "Other" && !customRole.trim()) newErrors.customRole = "Please specify your target role";
-    if (!targetIndustry) newErrors.targetIndustry = "Please select a target industry";
-    if (targetIndustry === "Other" && !customIndustry.trim()) newErrors.customIndustry = "Please specify your target industry";
-    if (!geography) newErrors.geography = "Please select a geography";
+
+    // Resume
+    if (!resume) {
+      newErrors.resume = "Please upload your resume (PDF, DOC, or DOCX)";
+    } else if (resume.size === 0) {
+      newErrors.resume = "The uploaded file is empty. Please select a valid resume file.";
+    }
+
+    // Target Role
+    if (!targetRole) {
+      newErrors.targetRole = "Please select a target job role to continue";
+    } else if (targetRole === "Other") {
+      if (!customRole.trim()) {
+        newErrors.customRole = "Please enter your target role";
+      } else if (customRole.trim().length < 3) {
+        newErrors.customRole = "Role name must be at least 3 characters";
+      } else if (customRole.trim().length > 100) {
+        newErrors.customRole = "Role name must be under 100 characters";
+      }
+    }
+
+    // Target Industry
+    if (!targetIndustry) {
+      newErrors.targetIndustry = "Please select a target industry to continue";
+    } else if (targetIndustry === "Other") {
+      if (!customIndustry.trim()) {
+        newErrors.customIndustry = "Please enter your target industry";
+      } else if (customIndustry.trim().length < 3) {
+        newErrors.customIndustry = "Industry name must be at least 3 characters";
+      } else if (customIndustry.trim().length > 100) {
+        newErrors.customIndustry = "Industry name must be under 100 characters";
+      }
+    }
+
+    // Geography
+    if (!geography) {
+      newErrors.geography = "Please select a geography to get accurate salary benchmarks";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
