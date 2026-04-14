@@ -24,14 +24,10 @@ export default function SalaryInsightsCard({ data }: { data: SalaryInsights }) {
           </div>
         </div>
 
-        <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-green-500 uppercase tracking-wide font-medium mb-1">Expected Salary Uplift</p>
-            <p className="text-sm text-green-700">Potential increase by reaching your target role</p>
-          </div>
-          <div className="bg-green-600 text-white font-bold text-xl px-5 py-2.5 rounded-xl flex-shrink-0 shadow-sm">
-            +{data.upliftPercent}
-          </div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <p className="text-xs text-green-500 uppercase tracking-wide font-medium mb-1">Expected Salary Uplift</p>
+          <p className="text-base font-bold text-green-700 break-words">+{data.upliftPercent}</p>
+          <p className="text-xs text-green-600 mt-0.5">Potential increase by reaching your target role</p>
         </div>
       </div>
     </div>
