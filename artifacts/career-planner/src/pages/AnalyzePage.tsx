@@ -11,16 +11,112 @@ const LOADING_STEPS = [
   "Estimating salary growth potential...",
 ];
 
+const TARGET_ROLES = [
+  "Software Engineer",
+  "Senior Software Engineer",
+  "Lead Software Engineer",
+  "Principal Engineer",
+  "Engineering Manager",
+  "Product Manager",
+  "Senior Product Manager",
+  "Director of Product",
+  "Data Analyst",
+  "Data Scientist",
+  "Senior Data Scientist",
+  "Machine Learning Engineer",
+  "AI Engineer",
+  "Business Analyst",
+  "Senior Business Analyst",
+  "Project Manager",
+  "Senior Project Manager",
+  "Program Manager",
+  "Scrum Master",
+  "Agile Coach",
+  "UX Designer",
+  "UI Designer",
+  "UX Researcher",
+  "Product Designer",
+  "Full Stack Developer",
+  "Frontend Developer",
+  "Backend Developer",
+  "DevOps Engineer",
+  "Cloud Engineer",
+  "Solution Architect",
+  "Enterprise Architect",
+  "Sales Manager",
+  "Account Executive",
+  "Business Development Manager",
+  "Marketing Manager",
+  "Digital Marketing Manager",
+  "Content Strategist",
+  "Operations Manager",
+  "Strategy Consultant",
+  "Management Consultant",
+  "Financial Analyst",
+  "Finance Manager",
+  "Human Resources Manager",
+  "HR Business Partner",
+  "Talent Acquisition Specialist",
+  "Supply Chain Manager",
+  "Other",
+];
+
+const TARGET_INDUSTRIES = [
+  "Information Technology",
+  "Banking & Finance",
+  "Healthcare",
+  "Consulting",
+  "Manufacturing",
+  "E-commerce",
+  "Education",
+  "Telecommunications",
+  "Media & Entertainment",
+  "Government & Public Sector",
+  "Startups",
+  "Retail",
+  "Automotive",
+  "Pharmaceuticals & Biotech",
+  "Real Estate",
+  "Energy & Utilities",
+  "Logistics & Supply Chain",
+  "FMCG",
+  "Legal",
+  "Non-Profit",
+  "Agriculture",
+  "Other",
+];
+
+const GEOGRAPHIES = [
+  "India",
+  "USA",
+  "Canada",
+  "UK",
+  "Europe",
+  "Middle East",
+  "Australia",
+  "Singapore",
+  "Remote",
+  "Other",
+];
+
+const ACCEPTED_MIME = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
+
 export default function AnalyzePage() {
   const [, navigate] = useLocation();
   const { setAnalysisResult } = useCareer();
 
   const [resume, setResume] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
+  const [customRole, setCustomRole] = useState("");
   const [targetIndustry, setTargetIndustry] = useState("");
+  const [customIndustry, setCustomIndustry] = useState("");
   const [geography, setGeography] = useState("India");
-  const [currentSalary, setCurrentSalary] = useState("");
-  const [desiredSalary, setDesiredSalary] = useState("");
 
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -32,8 +128,10 @@ export default function AnalyzePage() {
 
   const handleFileChange = (file: File | null) => {
     if (!file) return;
-    if (file.type !== "application/pdf") {
-      setErrors((e) => ({ ...e, resume: "Only PDF files are accepted" }));
+    const isValidMime = ACCEPTED_MIME.includes(file.type);
+    const isValidExt = ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
+    if (!isValidMime && !isValidExt) {
+      setErrors((e) => ({ ...e, resume: "Only PDF or Word (DOC/DOCX) files are accepted" }));
       return;
     }
     setResume(file);
@@ -54,10 +152,17 @@ export default function AnalyzePage() {
 
   const handleDragLeave = () => setIsDragging(false);
 
+  const getEffectiveRole = () => (targetRole === "Other" ? customRole.trim() : targetRole);
+  const getEffectiveIndustry = () => (targetIndustry === "Other" ? customIndustry.trim() : targetIndustry);
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!resume) newErrors.resume = "Please upload a PDF resume";
-    if (!targetRole.trim()) newErrors.targetRole = "Target job role is required";
+    if (!resume) newErrors.resume = "Please upload a PDF or Word resume";
+    if (!targetRole) newErrors.targetRole = "Please select a target job role";
+    if (targetRole === "Other" && !customRole.trim()) newErrors.customRole = "Please specify your target role";
+    if (!targetIndustry) newErrors.targetIndustry = "Please select a target industry";
+    if (targetIndustry === "Other" && !customIndustry.trim()) newErrors.customIndustry = "Please specify your target industry";
+    if (!geography) newErrors.geography = "Please select a geography";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -65,10 +170,10 @@ export default function AnalyzePage() {
   const reset = () => {
     setResume(null);
     setTargetRole("");
+    setCustomRole("");
     setTargetIndustry("");
+    setCustomIndustry("");
     setGeography("India");
-    setCurrentSalary("");
-    setDesiredSalary("");
     setErrors({});
     setApiError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -105,11 +210,9 @@ export default function AnalyzePage() {
     try {
       const formData = new FormData();
       formData.append("resume", resume!);
-      formData.append("targetRole", targetRole.trim());
-      formData.append("targetIndustry", targetIndustry.trim());
-      formData.append("geography", geography.trim() || "India");
-      if (currentSalary) formData.append("currentSalary", currentSalary);
-      if (desiredSalary) formData.append("desiredSalary", desiredSalary);
+      formData.append("targetRole", getEffectiveRole());
+      formData.append("targetIndustry", getEffectiveIndustry());
+      formData.append("geography", geography === "Other" ? "Other" : geography);
 
       const response = await fetch(`${import.meta.env.BASE_URL}api/analyze`, {
         method: "POST",
@@ -132,6 +235,11 @@ export default function AnalyzePage() {
       stopLoadingAnimation();
       setIsLoading(false);
     }
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.name.toLowerCase().endsWith(".pdf")) return "📄";
+    return "📝";
   };
 
   return (
@@ -162,7 +270,7 @@ export default function AnalyzePage() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-6">
-                <div className="spinner" />
+                <span className="block w-8 h-8 rounded-full border-[3px] border-indigo-200 border-t-indigo-600 animate-spin" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Analyzing your career profile...</h2>
               <p className="text-gray-400 text-sm mb-8">This may take 20–40 seconds</p>
@@ -183,9 +291,7 @@ export default function AnalyzePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
                     ) : idx === loadingStep ? (
-                      <span className="w-4 h-4 flex-shrink-0">
-                        <span className="block w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
-                      </span>
+                      <span className="block w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin flex-shrink-0" />
                     ) : (
                       <span className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
                     )}
@@ -202,7 +308,8 @@ export default function AnalyzePage() {
               {/* Resume Upload */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Resume (PDF) <span className="text-red-500">*</span>
+                  Resume <span className="text-red-500">*</span>
+                  <span className="ml-2 text-xs font-normal text-gray-400">PDF or Word (DOC/DOCX)</span>
                 </label>
                 <div
                   onDrop={handleDrop}
@@ -222,7 +329,7 @@ export default function AnalyzePage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="application/pdf"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     className="hidden"
                     onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
                   />
@@ -233,7 +340,9 @@ export default function AnalyzePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <span className="text-green-700 font-medium text-sm">{resume.name}</span>
+                      <span className="text-green-700 font-medium text-sm">
+                        {getFileIcon(resume)} {resume.name}
+                      </span>
                       <span className="text-green-500 text-xs">Click to change file</span>
                     </div>
                   ) : (
@@ -247,7 +356,7 @@ export default function AnalyzePage() {
                         <span className="text-indigo-600 font-semibold text-sm">Click to upload</span>
                         <span className="text-gray-500 text-sm"> or drag and drop</span>
                       </div>
-                      <span className="text-gray-400 text-xs">PDF only — max 10MB</span>
+                      <span className="text-gray-400 text-xs">PDF, DOC, or DOCX — max 10MB</span>
                     </div>
                   )}
                 </div>
@@ -261,20 +370,33 @@ export default function AnalyzePage() {
                 )}
               </div>
 
-              {/* Target Role */}
+              {/* Target Role Dropdown */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Target Job Role <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={targetRole}
-                  onChange={(e) => { setTargetRole(e.target.value); setErrors((er) => ({ ...er, targetRole: "" })); }}
-                  placeholder="e.g. Senior Product Manager"
-                  className={`w-full px-4 py-3 rounded-lg border text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                    errors.targetRole ? "border-red-400 bg-red-50" : "border-gray-300"
-                  }`}
-                />
+                <div className="relative">
+                  <select
+                    value={targetRole}
+                    onChange={(e) => {
+                      setTargetRole(e.target.value);
+                      setErrors((er) => ({ ...er, targetRole: "", customRole: "" }));
+                    }}
+                    className={`w-full px-4 py-3 pr-10 rounded-lg border text-sm text-gray-900 outline-none appearance-none bg-white transition-all focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                      errors.targetRole ? "border-red-400 bg-red-50" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Select a target role...</option>
+                    {TARGET_ROLES.map((role) => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
                 {errors.targetRole && (
                   <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -283,61 +405,114 @@ export default function AnalyzePage() {
                     {errors.targetRole}
                   </p>
                 )}
+                {/* Custom role input when "Other" is selected */}
+                {targetRole === "Other" && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      value={customRole}
+                      onChange={(e) => {
+                        setCustomRole(e.target.value);
+                        setErrors((er) => ({ ...er, customRole: "" }));
+                      }}
+                      placeholder="Enter your target role..."
+                      className={`w-full px-4 py-3 rounded-lg border text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                        errors.customRole ? "border-red-400 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {errors.customRole && (
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {errors.customRole}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Target Industry */}
+              {/* Target Industry Dropdown */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Target Industry <span className="text-gray-400 font-normal">(optional)</span>
+                  Target Industry <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={targetIndustry}
-                  onChange={(e) => setTargetIndustry(e.target.value)}
-                  placeholder="e.g. FinTech, Healthcare, SaaS"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-              </div>
-
-              {/* Geography */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Geography / Country <span className="text-gray-400 font-normal">(default: India)</span>
-                </label>
-                <input
-                  type="text"
-                  value={geography}
-                  onChange={(e) => setGeography(e.target.value)}
-                  placeholder="e.g. India, USA, UK"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-              </div>
-
-              {/* Salary Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Current Salary <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={currentSalary}
-                    onChange={(e) => setCurrentSalary(e.target.value)}
-                    placeholder="e.g. ₹8L or $60K"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
+                <div className="relative">
+                  <select
+                    value={targetIndustry}
+                    onChange={(e) => {
+                      setTargetIndustry(e.target.value);
+                      setErrors((er) => ({ ...er, targetIndustry: "", customIndustry: "" }));
+                    }}
+                    className={`w-full px-4 py-3 pr-10 rounded-lg border text-sm text-gray-900 outline-none appearance-none bg-white transition-all focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                      errors.targetIndustry ? "border-red-400 bg-red-50" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Select a target industry...</option>
+                    {TARGET_INDUSTRIES.map((ind) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Desired Salary <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={desiredSalary}
-                    onChange={(e) => setDesiredSalary(e.target.value)}
-                    placeholder="e.g. ₹20L or $120K"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
+                {errors.targetIndustry && (
+                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {errors.targetIndustry}
+                  </p>
+                )}
+                {targetIndustry === "Other" && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      value={customIndustry}
+                      onChange={(e) => {
+                        setCustomIndustry(e.target.value);
+                        setErrors((er) => ({ ...er, customIndustry: "" }));
+                      }}
+                      placeholder="Enter your target industry..."
+                      className={`w-full px-4 py-3 rounded-lg border text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                        errors.customIndustry ? "border-red-400 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {errors.customIndustry && (
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {errors.customIndustry}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Geography Dropdown */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Geography / Country
+                </label>
+                <div className="relative">
+                  <select
+                    value={geography}
+                    onChange={(e) => setGeography(e.target.value)}
+                    className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none appearance-none bg-white transition-all focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    {GEOGRAPHIES.map((geo) => (
+                      <option key={geo} value={geo}>{geo}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 

@@ -1,18 +1,25 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+const ACCEPTED_MIMETYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
+    if (ACCEPTED_MIMETYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed"));
+      cb(new Error("Only PDF or Word (DOC/DOCX) files are allowed"));
     }
   },
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -84,13 +91,21 @@ const MOCK_DATA = {
   },
 };
 
+async function extractTextFromFile(buffer: Buffer, mimetype: string): Promise<string> {
+  if (mimetype === "application/pdf") {
+    const pdfData = await pdfParse(buffer);
+    return pdfData.text;
+  }
+  // DOC / DOCX
+  const result = await mammoth.extractRawText({ buffer });
+  return result.value;
+}
+
 function buildPrompt(
   resumeText: string,
   targetRole: string,
   targetIndustry: string,
   geography: string,
-  currentSalary: string,
-  desiredSalary: string,
 ): string {
   return `You are an expert career analyst and talent intelligence system.
 
@@ -103,8 +118,6 @@ USER INPUTS:
 - Target Role: ${targetRole}
 - Target Industry: ${targetIndustry}
 - Geography: ${geography}
-- Current Salary: ${currentSalary}
-- Desired Salary: ${desiredSalary}
 
 YOUR TASK:
 Analyze the resume against the target role and generate a structured JSON response. 
@@ -150,16 +163,14 @@ Be specific, realistic, and personalized. Avoid generic advice. Base all outputs
 }
 
 router.post("/analyze", upload.single("resume"), async (req, res): Promise<void> => {
-  const { targetRole, targetIndustry, geography, currentSalary, desiredSalary } = req.body as {
+  const { targetRole, targetIndustry, geography } = req.body as {
     targetRole?: string;
     targetIndustry?: string;
     geography?: string;
-    currentSalary?: string;
-    desiredSalary?: string;
   };
 
   if (!req.file) {
-    res.status(400).json({ error: "Please upload a PDF resume" });
+    res.status(400).json({ error: "Please upload a PDF or Word resume" });
     return;
   }
 
@@ -170,15 +181,14 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
 
   let resumeText = "";
   try {
-    const pdfData = await pdfParse(req.file.buffer);
-    resumeText = pdfData.text;
+    resumeText = await extractTextFromFile(req.file.buffer, req.file.mimetype);
     if (!resumeText || resumeText.trim().length < 50) {
-      res.status(400).json({ error: "Could not extract text from the PDF. Please ensure the file is a text-based PDF." });
+      res.status(400).json({ error: "Could not extract text from the file. Please ensure it is a readable document." });
       return;
     }
   } catch (err) {
-    req.log.error({ err }, "PDF parse error");
-    res.status(400).json({ error: "Failed to parse the PDF. Please upload a valid PDF file." });
+    req.log.error({ err }, "File parse error");
+    res.status(400).json({ error: "Failed to parse the uploaded file. Please upload a valid PDF or Word document." });
     return;
   }
 
@@ -187,8 +197,6 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
     targetRole.trim(),
     (targetIndustry ?? "").trim() || "Not specified",
     (geography ?? "India").trim() || "India",
-    (currentSalary ?? "").trim() || "Not specified",
-    (desiredSalary ?? "").trim() || "Not specified",
   );
 
   try {
