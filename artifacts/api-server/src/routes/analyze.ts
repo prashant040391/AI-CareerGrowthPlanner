@@ -214,13 +214,19 @@ Return the following JSON structure:
     { "step": 5, "focusArea": "", "timeline": "Month 10-12", "action": "specific action" }
   ],
   "salaryInsights": {
-    "currentRange": "e.g. ₹8L – ₹12L per annum",
-    "targetRange": "e.g. ₹18L – ₹25L per annum",
-    "upliftPercent": "e.g. 60-80%"
+    "currentRange": "Estimate the candidate's CURRENT market value based on their actual skills, years of experience, education, tools, and industry — NOT a generic range. Use the currency specified above for ${geography}. Example format for India: ₹10L – ₹15L per annum",
+    "targetRange": "Estimate the salary range for the TARGET role (${targetRole}) in ${geography} for someone who has bridged all skill gaps. Use the same currency. Example format for India: ₹22L – ₹30L per annum",
+    "upliftPercent": "Calculate the realistic salary growth percentage from current to target, e.g. 60-80%"
   }
 }
 
-Be specific, realistic, and personalized. Avoid generic advice. Base all outputs strictly on the resume content and the target role provided.`;
+IMPORTANT SALARY RULES:
+- currentRange must reflect the candidate's REAL estimated worth based on what is in their resume (skills, tools, education, experience years, and current role). Do not use placeholder text.
+- targetRange must reflect realistic compensation for the target role in the specified geography.
+- All figures must use the currency appropriate for ${geography} as instructed above.
+- Be specific and realistic. Avoid generic wide ranges unless the data is genuinely ambiguous.
+
+Be specific, realistic, and personalized throughout. Avoid generic advice. Base all outputs strictly on the resume content and the inputs provided.`;
 }
 
 router.post("/analyze", upload.single("resume"), async (req, res): Promise<void> => {
@@ -231,7 +237,28 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
   };
 
   if (!req.file) {
-    res.status(400).json({ error: "Please upload a PDF or Word resume" });
+    res.status(400).json({ error: "No file was uploaded. Please attach a PDF or Word (.doc / .docx) resume." });
+    return;
+  }
+
+  // Empty file
+  if (req.file.size === 0) {
+    res.status(400).json({ error: "The uploaded file is empty. Please upload a resume with content." });
+    return;
+  }
+
+  // Validate MIME type explicitly on the server
+  const validMimeTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+  const originalName = (req.file.originalname ?? "").toLowerCase();
+  const validExt = [".pdf", ".doc", ".docx"].some((ext) => originalName.endsWith(ext));
+  if (!validMimeTypes.includes(req.file.mimetype) && !validExt) {
+    res.status(400).json({
+      error: `Unsupported file type "${req.file.mimetype}". Only PDF (.pdf) and Word (.doc, .docx) files are accepted.`,
+    });
     return;
   }
 
@@ -240,16 +267,24 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
     return;
   }
 
+  if (!targetIndustry || typeof targetIndustry !== "string" || targetIndustry.trim() === "") {
+    res.status(400).json({ error: "Target industry is required" });
+    return;
+  }
+
   let resumeText = "";
   try {
     resumeText = await extractTextFromFile(req.file.buffer, req.file.mimetype);
-    if (!resumeText || resumeText.trim().length < 50) {
-      res.status(400).json({ error: "Could not extract text from the file. Please ensure it is a readable document." });
+    if (!resumeText || resumeText.trim().length < 30) {
+      res.status(400).json({
+        error:
+          "The uploaded file appears to have no readable text. Please ensure the file is not scanned/image-only and is not password protected.",
+      });
       return;
     }
   } catch (err) {
     req.log.error({ err }, "File parse error");
-    res.status(400).json({ error: "Failed to parse the uploaded file. Please upload a valid PDF or Word document." });
+    res.status(400).json({ error: "Failed to read the uploaded file. Please upload a valid, unprotected PDF or Word document." });
     return;
   }
 
