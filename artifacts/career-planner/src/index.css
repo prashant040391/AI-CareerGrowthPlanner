@@ -121,3 +121,33 @@
 .progress-ring circle {
   transition: stroke-dashoffset 0.8s ease-in-out;
 }
+
+@media print {
+  .no-print { display: none !important; }
+
+  body { background: white !important; }
+
+  .min-h-screen { min-height: unset !important; }
+
+  .bg-gray-50 { background: white !important; }
+
+  .shadow-sm, .shadow-md { box-shadow: none !important; }
+
+  .sticky { position: static !important; }
+
+  .fade-in, .fade-in-delay-1, .fade-in-delay-2,
+  .fade-in-delay-3, .fade-in-delay-4, .fade-in-delay-5,
+  .fade-in-delay-6 {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .grid { break-inside: avoid; }
+
+  .rounded-xl, .rounded-lg { border-radius: 8px !important; }
+
+  @page {
+    margin: 12mm 14mm;
+    size: A4 portrait;
+  }
+}

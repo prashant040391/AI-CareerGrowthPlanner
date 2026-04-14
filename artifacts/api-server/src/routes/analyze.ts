@@ -94,12 +94,53 @@ const MOCK_DATA = {
 
 function getCurrencyGuide(geography: string): string {
   const geo = geography.toLowerCase();
+
+  // India & Remote
   if (geo === "india" || geo === "remote") return "Indian Rupees (₹), e.g. ₹12L – ₹18L per annum";
-  if (geo === "north america") return "US Dollars (USD $), e.g. $80,000 – $120,000 per year";
-  if (geo === "europe") return "Euros (EUR €), e.g. €60,000 – €90,000 per year";
-  if (geo === "australia / oceania") return "Australian Dollars (AUD A$), e.g. A$90,000 – A$130,000 per year";
-  if (geo === "asia") return "US Dollars (USD $) or local currency as appropriate, e.g. $40,000 – $70,000 per year";
-  if (geo === "africa") return "US Dollars (USD $), e.g. $20,000 – $45,000 per year";
+  if (geo === "sri lanka") return "Sri Lankan Rupees (LKR), e.g. LKR 2M – 4M per year";
+  if (geo === "pakistan" || geo === "bangladesh") return "USD equivalent, e.g. $12,000 – $25,000 per year";
+
+  // Europe
+  if (["united kingdom"].includes(geo)) return "British Pounds (£), e.g. £45,000 – £80,000 per year";
+  if (["switzerland"].includes(geo)) return "Swiss Francs (CHF), e.g. CHF 80,000 – CHF 130,000 per year";
+  if (["norway", "sweden", "denmark", "finland"].includes(geo)) return "Euros or local Scandinavian currency, e.g. €50,000 – €90,000 per year";
+  if (["germany", "france", "netherlands", "spain", "italy", "belgium", "ireland",
+       "poland", "portugal", "other europe"].includes(geo)) return "Euros (€), e.g. €40,000 – €80,000 per year";
+
+  // North America
+  if (geo === "usa") return "US Dollars (USD $), e.g. $80,000 – $140,000 per year";
+  if (geo === "canada") return "Canadian Dollars (CAD $), e.g. CAD $70,000 – $110,000 per year";
+  if (geo === "mexico" || geo === "other north america") return "USD equivalent, e.g. $20,000 – $45,000 per year";
+
+  // Middle East
+  if (["uae", "qatar", "bahrain", "kuwait", "saudi arabia", "oman"].includes(geo))
+    return "USD equivalent (tax-free), e.g. $50,000 – $120,000 per year";
+  if (geo === "israel") return "USD equivalent, e.g. $60,000 – $100,000 per year";
+  if (geo === "jordan" || geo === "other middle east") return "USD equivalent, e.g. $20,000 – $50,000 per year";
+
+  // Asia
+  if (geo === "singapore") return "Singapore Dollars (SGD), e.g. SGD 60,000 – 120,000 per year";
+  if (geo === "japan") return "Japanese Yen (¥), e.g. ¥5M – ¥10M per year";
+  if (geo === "south korea") return "Korean Won (KRW), e.g. KRW 40M – 80M per year";
+  if (geo === "china") return "Chinese Yuan (¥ CNY), e.g. ¥200,000 – ¥500,000 per year";
+  if (["malaysia", "thailand", "indonesia", "philippines", "vietnam",
+       "bangladesh", "other asia"].includes(geo)) return "USD equivalent, e.g. $15,000 – $40,000 per year";
+
+  // Australia & Oceania
+  if (geo === "australia") return "Australian Dollars (AUD A$), e.g. A$80,000 – A$130,000 per year";
+  if (geo === "new zealand") return "New Zealand Dollars (NZD), e.g. NZD 70,000 – 110,000 per year";
+
+  // South America
+  if (geo === "brazil") return "Brazilian Reais (BRL), e.g. BRL 80,000 – 180,000 per year";
+  if (["argentina", "colombia", "chile", "peru", "venezuela", "other south america"].includes(geo))
+    return "USD equivalent, e.g. $15,000 – $40,000 per year";
+
+  // Africa
+  if (geo === "south africa") return "South African Rand (ZAR), e.g. ZAR 400,000 – 800,000 per year";
+  if (["nigeria", "kenya", "egypt", "ghana", "ethiopia", "tanzania",
+       "uganda", "morocco", "other africa"].includes(geo))
+    return "USD equivalent, e.g. $15,000 – $40,000 per year";
+
   return "US Dollars (USD $), e.g. $50,000 – $80,000 per year";
 }
 

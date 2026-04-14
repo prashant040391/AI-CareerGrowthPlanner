@@ -86,16 +86,56 @@ const TARGET_INDUSTRIES = [
   "Other",
 ];
 
-const GEOGRAPHIES = [
-  "India",
-  "Remote",
-  "Africa",
-  "Antarctica",
-  "Asia",
-  "Australia / Oceania",
-  "Europe",
-  "North America",
-  "South America",
+const GEOGRAPHY_GROUPS: { label: string; options: string[] }[] = [
+  {
+    label: "Popular",
+    options: ["India", "Remote"],
+  },
+  {
+    label: "Africa",
+    options: [
+      "Egypt", "Ethiopia", "Ghana", "Kenya", "Morocco",
+      "Nigeria", "South Africa", "Tanzania", "Uganda", "Other Africa",
+    ],
+  },
+  {
+    label: "Asia",
+    options: [
+      "Bangladesh", "China", "Indonesia", "Japan", "Malaysia",
+      "Pakistan", "Philippines", "Singapore", "South Korea",
+      "Sri Lanka", "Thailand", "Vietnam", "Other Asia",
+    ],
+  },
+  {
+    label: "Australia & Oceania",
+    options: ["Australia", "New Zealand", "Other Oceania"],
+  },
+  {
+    label: "Europe",
+    options: [
+      "Belgium", "Denmark", "Finland", "France", "Germany",
+      "Ireland", "Italy", "Netherlands", "Norway", "Poland",
+      "Portugal", "Spain", "Sweden", "Switzerland", "United Kingdom", "Other Europe",
+    ],
+  },
+  {
+    label: "Middle East",
+    options: [
+      "Bahrain", "Israel", "Jordan", "Kuwait", "Oman",
+      "Qatar", "Saudi Arabia", "UAE", "Other Middle East",
+    ],
+  },
+  {
+    label: "North America",
+    options: ["Canada", "Mexico", "USA", "Other North America"],
+  },
+  {
+    label: "South America",
+    options: [
+      "Argentina", "Brazil", "Chile", "Colombia", "Peru",
+      "Venezuela", "Other South America",
+    ],
+  },
 ];
 
 const ACCEPTED_MIME = [
@@ -503,8 +543,12 @@ export default function AnalyzePage() {
                     onChange={(e) => setGeography(e.target.value)}
                     className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none appearance-none bg-white transition-all focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   >
-                    {GEOGRAPHIES.map((geo) => (
-                      <option key={geo} value={geo}>{geo}</option>
+                    {GEOGRAPHY_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map((geo) => (
+                          <option key={geo} value={geo}>{geo}</option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
