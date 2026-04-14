@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useCareer } from "../context/CareerContext";
 import ProfileSummaryCard from "../components/ProfileSummaryCard";
@@ -12,7 +12,6 @@ export default function ResultsPage() {
   const [, navigate] = useLocation();
   const { analysisResult } = useCareer();
   const reportRef = useRef<HTMLDivElement>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!analysisResult) {
@@ -70,57 +69,14 @@ export default function ResultsPage() {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!reportRef.current || isDownloading) return;
-    setIsDownloading(true);
-    try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#f9fafb",
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
-
-      let yOffset = 0;
-      let remainingHeight = imgHeight;
-
-      while (remainingHeight > 0) {
-        pdf.addImage(imgData, "PNG", 0, -yOffset, imgWidth, imgHeight);
-        remainingHeight -= pageHeight;
-        yOffset += pageHeight;
-        if (remainingHeight > 0) pdf.addPage();
-      }
-
-      const fileName = profileSummary.candidateName
-        ? `${profileSummary.candidateName.replace(/\s+/g, "_")}_Career_Report.pdf`
-        : "Career_Analysis_Report.pdf";
-
-      pdf.save(fileName);
-    } catch (err) {
-      console.error("PDF generation failed", err);
-      alert("Could not generate PDF. Please try again.");
-    } finally {
-      setIsDownloading(false);
-    }
+  const handleDownloadPdf = () => {
+    window.print();
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      {/* Header — hidden when printing */}
+      <div className="no-print bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -159,7 +115,7 @@ export default function ResultsPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-10">
-        {/* Page Title */}
+        {/* Page Title row — Download PDF button sits next to Profile Summary */}
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Your Career Analysis Report</h1>
@@ -170,29 +126,19 @@ export default function ResultsPage() {
               )}
             </p>
           </div>
-          {/* Download PDF button — positioned next to the Profile Summary section */}
+          {/* Download PDF — no-print hides it from the printed page itself */}
           <button
             onClick={handleDownloadPdf}
-            disabled={isDownloading}
-            className="flex-shrink-0 flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="no-print flex-shrink-0 flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg transition-all"
           >
-            {isDownloading ? (
-              <>
-                <span className="block w-4 h-4 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Download PDF
-              </>
-            )}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download PDF
           </button>
         </div>
 
-        {/* Report content captured for PDF */}
+        {/* Report content — this is what gets printed */}
         <div ref={reportRef}>
           {/* Top row: Profile + Career Match */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -216,32 +162,22 @@ export default function ResultsPage() {
             <SalaryInsightsCard data={salaryInsights} />
           </div>
 
-          {/* Disclaimer inside PDF */}
+          {/* Disclaimer */}
           <div className="text-center text-xs text-gray-400 italic border-t border-gray-200 pt-6 pb-4">
             This is an AI-generated career planning output. Use it as a decision support guide, not as the sole basis for career decisions.
           </div>
         </div>
 
-        {/* Bottom CTAs */}
-        <div className="flex justify-center gap-4 mt-4">
+        {/* Bottom CTAs — hidden when printing */}
+        <div className="no-print flex justify-center gap-4 mt-4">
           <button
             onClick={handleDownloadPdf}
-            disabled={isDownloading}
-            className="flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-6 py-3 rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-6 py-3 rounded-xl transition-all"
           >
-            {isDownloading ? (
-              <>
-                <span className="block w-4 h-4 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Download PDF
-              </>
-            )}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download PDF
           </button>
           <button
             onClick={handleCopySummary}
