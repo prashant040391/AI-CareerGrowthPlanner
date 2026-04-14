@@ -40,8 +40,7 @@ function CircularProgress({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-bold text-gray-900" style={{ color }}>{score}</span>
-        <span className="text-xs text-gray-400 -mt-0.5">/ 100</span>
+        <span className="text-2xl font-bold" style={{ color }}>{score}%</span>
       </div>
     </div>
   );
