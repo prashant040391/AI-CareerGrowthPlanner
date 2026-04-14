@@ -88,6 +88,7 @@ const TARGET_INDUSTRIES = [
 
 const GEOGRAPHIES = [
   "India",
+  "Remote",
   "Africa",
   "Antarctica",
   "Asia",

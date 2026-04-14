@@ -91,6 +91,17 @@ const MOCK_DATA = {
   },
 };
 
+function getCurrencyGuide(geography: string): string {
+  const geo = geography.toLowerCase();
+  if (geo === "india" || geo === "remote") return "Indian Rupees (₹), e.g. ₹12L – ₹18L per annum";
+  if (geo === "north america") return "US Dollars (USD $), e.g. $80,000 – $120,000 per year";
+  if (geo === "europe") return "Euros (EUR €), e.g. €60,000 – €90,000 per year";
+  if (geo === "australia / oceania") return "Australian Dollars (AUD A$), e.g. A$90,000 – A$130,000 per year";
+  if (geo === "asia") return "US Dollars (USD $) or local currency as appropriate, e.g. $40,000 – $70,000 per year";
+  if (geo === "africa") return "US Dollars (USD $), e.g. $20,000 – $45,000 per year";
+  return "US Dollars (USD $), e.g. $50,000 – $80,000 per year";
+}
+
 async function extractTextFromFile(buffer: Buffer, mimetype: string): Promise<string> {
   if (mimetype === "application/pdf") {
     const pdfData = await pdfParse(buffer);
@@ -107,6 +118,12 @@ function buildPrompt(
   targetIndustry: string,
   geography: string,
 ): string {
+  const currencyGuide = getCurrencyGuide(geography);
+  const geographyNote =
+    geography === "Remote"
+      ? "Remote (use Indian Rupee INR for salary since the candidate is India-based)"
+      : geography;
+
   return `You are an expert career analyst and talent intelligence system.
 
 A professional has uploaded their resume and wants a detailed career gap analysis.
@@ -117,7 +134,8 @@ ${resumeText}
 USER INPUTS:
 - Target Role: ${targetRole}
 - Target Industry: ${targetIndustry}
-- Geography: ${geography}
+- Geography: ${geographyNote}
+- Salary Currency: Express all salary figures in ${currencyGuide}
 
 YOUR TASK:
 Analyze the resume against the target role and generate a structured JSON response. 
