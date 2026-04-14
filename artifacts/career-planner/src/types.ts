@@ -1,4 +1,5 @@
 export interface ProfileSummary {
+  candidateName: string;
   currentRole: string;
   yearsOfExperience: string;
   industry: string;
