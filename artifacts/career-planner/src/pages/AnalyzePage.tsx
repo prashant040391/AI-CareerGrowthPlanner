@@ -88,15 +88,13 @@ const TARGET_INDUSTRIES = [
 
 const GEOGRAPHIES = [
   "India",
-  "USA",
-  "Canada",
-  "UK",
+  "Africa",
+  "Antarctica",
+  "Asia",
+  "Australia / Oceania",
   "Europe",
-  "Middle East",
-  "Australia",
-  "Singapore",
-  "Remote",
-  "Other",
+  "North America",
+  "South America",
 ];
 
 const ACCEPTED_MIME = [
