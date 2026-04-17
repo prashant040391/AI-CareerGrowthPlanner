@@ -1,4 +1,3 @@
-import { memo } from "react";
 import type { RoadmapStep } from "../types";
 
 const STEP_COLORS = [
@@ -41,7 +40,7 @@ function getLinkLabel(url: string): string {
   }
 }
 
-function RoadmapCard({ steps }: { steps: RoadmapStep[] }) {
+export default function RoadmapCard({ steps }: { steps: RoadmapStep[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 fade-in fade-in-delay-5">
       <h2 className="text-base font-semibold text-gray-900 mb-6 flex items-center gap-2">
@@ -109,5 +108,3 @@ function RoadmapCard({ steps }: { steps: RoadmapStep[] }) {
     </div>
   );
 }
-
-export default memo(RoadmapCard);
