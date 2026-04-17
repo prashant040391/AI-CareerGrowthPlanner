@@ -1,4 +1,3 @@
-import { memo } from "react";
 import type { CareerMatch } from "../types";
 
 const READINESS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -47,7 +46,7 @@ function CircularProgress({ score }: { score: number }) {
   );
 }
 
-function CareerMatchCard({ data }: { data: CareerMatch }) {
+export default function CareerMatchCard({ data }: { data: CareerMatch }) {
   const readiness = READINESS_COLORS[data.readinessLevel] ?? { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-200" };
 
   return (
@@ -78,5 +77,3 @@ function CareerMatchCard({ data }: { data: CareerMatch }) {
     </div>
   );
 }
-
-export default memo(CareerMatchCard);
