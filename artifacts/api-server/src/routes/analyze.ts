@@ -59,30 +59,35 @@ const MOCK_DATA = {
       focusArea: "Project Management Fundamentals",
       timeline: "Month 1-2",
       action: "Enroll in PMP or CAPM certification prep. Complete PMI's Project Management Basics on Coursera.",
+      courseLink: "https://www.pmi.org/certifications/project-management-pmp",
     },
     {
       step: 2,
       focusArea: "Risk & Budget Management",
       timeline: "Month 3-4",
       action: "Take a Risk Management course on Udemy. Practice cost estimation and budget tracking in a real or simulated project.",
+      courseLink: "https://www.coursera.org/search?query=risk+management+project",
     },
     {
       step: 3,
       focusArea: "Agile & Scrum Methodology",
       timeline: "Month 5-6",
       action: "Complete Scrum Master certification (CSM or PSM I). Apply agile principles to current work where possible.",
+      courseLink: "https://www.scrum.org/assessments/professional-scrum-master-i-certification",
     },
     {
       step: 4,
       focusArea: "Leadership & Team Management",
       timeline: "Month 7-9",
       action: "Lead a cross-functional initiative at work. Take a leadership course focusing on delegation, conflict resolution, and motivation.",
+      courseLink: "https://www.coursera.org/search?query=leadership+team+management",
     },
     {
       step: 5,
       focusArea: "Senior Role Preparation",
       timeline: "Month 10-12",
       action: "Apply for Senior PM roles. Update LinkedIn and resume to reflect new certifications, leadership experience, and expanded scope.",
+      courseLink: "https://www.google.com/search?q=Senior+Project+Manager+role+preparation+online+course+certification",
     },
   ],
   salaryInsights: {
@@ -207,11 +212,11 @@ Return the following JSON structure:
     "weakAreas": ["area1", "area2"]
   },
   "roadmap": [
-    { "step": 1, "focusArea": "", "timeline": "Month 1-2", "action": "specific action" },
-    { "step": 2, "focusArea": "", "timeline": "Month 3-4", "action": "specific action" },
-    { "step": 3, "focusArea": "", "timeline": "Month 5-6", "action": "specific action" },
-    { "step": 4, "focusArea": "", "timeline": "Month 7-9", "action": "specific action" },
-    { "step": 5, "focusArea": "", "timeline": "Month 10-12", "action": "specific action" }
+    { "step": 1, "focusArea": "", "timeline": "Month 1-2", "action": "specific action", "courseLink": "URL to a top-rated course or certification on a trusted platform — see rules below" },
+    { "step": 2, "focusArea": "", "timeline": "Month 3-4", "action": "specific action", "courseLink": "URL" },
+    { "step": 3, "focusArea": "", "timeline": "Month 5-6", "action": "specific action", "courseLink": "URL" },
+    { "step": 4, "focusArea": "", "timeline": "Month 7-9", "action": "specific action", "courseLink": "URL" },
+    { "step": 5, "focusArea": "", "timeline": "Month 10-12", "action": "specific action", "courseLink": "URL" }
   ],
   "salaryInsights": {
     "currentRange": "Estimate the candidate's CURRENT market value based on their actual skills, years of experience, education, tools, and industry — NOT a generic range. Use the currency specified above for ${geography}. Example format for India: ₹10L – ₹15L per annum",
@@ -220,6 +225,30 @@ Return the following JSON structure:
   }
 }
 
+IMPORTANT COURSE LINK RULES:
+For each roadmap step, set "courseLink" to the best available URL using these rules (in order of preference):
+1. If the step involves a well-known certification with a stable official page, use the exact official URL:
+   - PMP / CAPM: https://www.pmi.org/certifications/project-management-pmp
+   - Scrum Master (CSM): https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster
+   - PSM I (Professional Scrum Master): https://www.scrum.org/assessments/professional-scrum-master-i-certification
+   - AWS certifications: https://aws.amazon.com/certification/
+   - Google Cloud certifications: https://cloud.google.com/learn/certification
+   - Microsoft Azure certifications: https://learn.microsoft.com/en-us/credentials/browse/
+   - Google Data Analytics / Project Management on Coursera: https://www.coursera.org/professional-certificates/google-project-management
+   - Google Digital Marketing: https://skillshop.withgoogle.com/
+   - CISSP / Security+: https://www.isc2.org/certifications/cissp
+2. If the step is about a topic well-covered on Coursera, use the Coursera search URL:
+   https://www.coursera.org/search?query=TOPIC (replace TOPIC with URL-encoded focus area keywords)
+3. If the step is about a Microsoft or Azure technology, prefer:
+   https://learn.microsoft.com/en-us/training/browse/?terms=TOPIC
+4. If the step is about an AWS technology, prefer:
+   https://aws.amazon.com/training/course-descriptions/
+5. For any other topic, use edX search:
+   https://www.edx.org/search?q=TOPIC
+- ONLY use URLs from these trusted domains: coursera.org, edx.org, udemy.com, learn.microsoft.com, aws.amazon.com, cloud.google.com, cloudskillsboost.google, pmi.org, scrum.org, scrumalliance.org, isc2.org, skillshop.withgoogle.com, khanacademy.org, pluralsight.com
+- If no trusted platform is relevant, set courseLink to null.
+- URL-encode all topic strings in search URLs (spaces become %20 or +).
+
 IMPORTANT SALARY RULES:
 - currentRange must reflect the candidate's REAL estimated worth based on what is in their resume (skills, tools, education, experience years, and current role). Do not use placeholder text.
 - targetRange must reflect realistic compensation for the target role in the specified geography.
@@ -227,6 +256,46 @@ IMPORTANT SALARY RULES:
 - Be specific and realistic. Avoid generic wide ranges unless the data is genuinely ambiguous.
 
 Be specific, realistic, and personalized throughout. Avoid generic advice. Base all outputs strictly on the resume content and the inputs provided.`;
+}
+
+/* ── Course link helpers ─────────────────────────────────────────────────── */
+const TRUSTED_COURSE_DOMAINS = [
+  "coursera.org",
+  "edx.org",
+  "udemy.com",
+  "learn.microsoft.com",
+  "aws.amazon.com",
+  "cloud.google.com",
+  "cloudskillsboost.google",
+  "pmi.org",
+  "scrum.org",
+  "scrumalliance.org",
+  "isc2.org",
+  "skillshop.withgoogle.com",
+  "khanacademy.org",
+  "pluralsight.com",
+];
+
+function isTrustedCourseLink(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return TRUSTED_COURSE_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
+function googleSearchFallback(focusArea: string): string {
+  const q = encodeURIComponent(`${focusArea} online course certification`);
+  return `https://www.google.com/search?q=${q}`;
+}
+
+function ensureCourseLinkFallback(roadmap: Array<{ step: number; focusArea: string; timeline: string; action: string; courseLink?: string | null }>): Array<{ step: number; focusArea: string; timeline: string; action: string; courseLink: string }> {
+  return roadmap.map((r) => ({
+    ...r,
+    courseLink: isTrustedCourseLink(r.courseLink) ? r.courseLink! : googleSearchFallback(r.focusArea),
+  }));
 }
 
 /* ── Resume section validation endpoint ─────────────────────────────────── */
@@ -399,7 +468,15 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
       rawText = jsonMatch[1].trim();
     }
 
-    const parsed = JSON.parse(rawText) as unknown;
+    const parsed = JSON.parse(rawText) as Record<string, unknown>;
+
+    // Ensure every roadmap step has a valid, trusted course link (or Google search fallback)
+    if (Array.isArray(parsed.roadmap)) {
+      parsed.roadmap = ensureCourseLinkFallback(
+        parsed.roadmap as Array<{ step: number; focusArea: string; timeline: string; action: string; courseLink?: string | null }>
+      );
+    }
+
     res.json(parsed);
   } catch (err) {
     if (err instanceof SyntaxError) {

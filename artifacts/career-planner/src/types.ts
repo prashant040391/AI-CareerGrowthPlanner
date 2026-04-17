@@ -20,6 +20,7 @@ export interface RoadmapStep {
   focusArea: string;
   timeline: string;
   action: string;
+  courseLink?: string;
 }
 
 export interface SalaryInsights {
