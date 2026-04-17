@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vBAj40vmaNZWbPsVnnnI4"
+uri = "file://AI_Career_Growth_Planner_Prompt.pdf"
+type = "pdf"
+title = "AI Career Growth Planner — Full Project Prompt"
