@@ -1,4 +1,6 @@
-export default function StrengthsCard({ strengths }: { strengths: string[] }) {
+import { memo } from "react";
+
+function StrengthsCard({ strengths }: { strengths: string[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 fade-in fade-in-delay-3">
       <h2 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
@@ -22,3 +24,5 @@ export default function StrengthsCard({ strengths }: { strengths: string[] }) {
     </div>
   );
 }
+
+export default memo(StrengthsCard);
