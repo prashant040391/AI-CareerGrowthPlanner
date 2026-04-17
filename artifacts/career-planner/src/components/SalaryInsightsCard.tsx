@@ -1,6 +1,7 @@
+import { memo } from "react";
 import type { SalaryInsights } from "../types";
 
-export default function SalaryInsightsCard({ data }: { data: SalaryInsights }) {
+function SalaryInsightsCard({ data }: { data: SalaryInsights }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 fade-in fade-in-delay-6">
       <h2 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
@@ -33,3 +34,5 @@ export default function SalaryInsightsCard({ data }: { data: SalaryInsights }) {
     </div>
   );
 }
+
+export default memo(SalaryInsightsCard);

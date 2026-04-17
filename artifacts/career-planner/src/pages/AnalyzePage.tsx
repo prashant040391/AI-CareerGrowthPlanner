@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useCareer } from "../context/CareerContext";
 import type { CareerAnalysis } from "../types";
@@ -185,6 +185,7 @@ export default function AnalyzePage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analyzeAbortRef = useRef<AbortController | null>(null);
 
   const handleFileChange = (file: File | null) => {
     if (!file) return;
@@ -257,8 +258,14 @@ export default function AnalyzePage() {
 
   const handleDragLeave = () => setIsDragging(false);
 
-  const getEffectiveRole = () => (targetRole === "Other" ? customRole.trim() : targetRole);
-  const getEffectiveIndustry = () => (targetIndustry === "Other" ? customIndustry.trim() : targetIndustry);
+  const effectiveRole = useMemo(
+    () => (targetRole === "Other" ? customRole.trim() : targetRole),
+    [targetRole, customRole]
+  );
+  const effectiveIndustry = useMemo(
+    () => (targetIndustry === "Other" ? customIndustry.trim() : targetIndustry),
+    [targetIndustry, customIndustry]
+  );
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -318,7 +325,7 @@ export default function AnalyzePage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const startLoadingAnimation = () => {
+  const startLoadingAnimation = useCallback(() => {
     setLoadingStep(0);
     let step = 0;
     loadingIntervalRef.current = setInterval(() => {
@@ -329,51 +336,93 @@ export default function AnalyzePage() {
         if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
       }
     }, 2500);
-  };
+  }, []);
 
-  const stopLoadingAnimation = () => {
+  const stopLoadingAnimation = useCallback(() => {
     if (loadingIntervalRef.current) {
       clearInterval(loadingIntervalRef.current);
       loadingIntervalRef.current = null;
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
+  // Core analysis fetch — shared by auto-trigger and manual submit
+  const doAnalyze = useCallback(async (
+    controller: AbortController,
+    role: string,
+    industry: string,
+    geo: string,
+    file: File,
+  ) => {
     setIsLoading(true);
     setApiError("");
     startLoadingAnimation();
 
     try {
-      const formData = new FormData();
-      formData.append("resume", resume!);
-      formData.append("targetRole", getEffectiveRole());
-      formData.append("targetIndustry", getEffectiveIndustry());
-      formData.append("geography", geography === "Other" ? "Other" : geography);
+      const fd = new FormData();
+      fd.append("resume", file);
+      fd.append("targetRole", role);
+      fd.append("targetIndustry", industry);
+      fd.append("geography", geo);
 
       const response = await fetch(`${import.meta.env.BASE_URL}api/analyze`, {
         method: "POST",
-        body: formData,
+        body: fd,
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       const data = (await response.json()) as CareerAnalysis | { error: string };
 
       if (!response.ok) {
-        const errMsg = (data as { error: string }).error ?? "Analysis failed. Please try again.";
-        setApiError(errMsg);
+        setApiError((data as { error: string }).error ?? "Analysis failed. Please try again.");
         return;
       }
 
       setAnalysisResult(data as CareerAnalysis);
       navigate("/results");
-    } catch {
+    } catch (err) {
+      if ((err as { name?: string }).name === "AbortError") return;
       setApiError("Network error. Please check your connection and try again.");
     } finally {
-      stopLoadingAnimation();
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        stopLoadingAnimation();
+        setIsLoading(false);
+      }
     }
+  }, [navigate, setAnalysisResult, startLoadingAnimation, stopLoadingAnimation]);
+
+  // Auto-trigger: fire as soon as all required fields are complete
+  useEffect(() => {
+    if (!resume || !effectiveRole || !effectiveIndustry || !geography) return;
+
+    const controller = new AbortController();
+
+    // 500 ms debounce — absorbs rapid dropdown changes and slow typing in "Other" fields
+    const timer = setTimeout(() => {
+      analyzeAbortRef.current?.abort();
+      analyzeAbortRef.current = controller;
+      doAnalyze(controller, effectiveRole, effectiveIndustry, geography, resume);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  // doAnalyze is stable (useCallback); resume identity changes only on new file upload
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume, effectiveRole, effectiveIndustry, geography]);
+
+  // Manual submit — validate then force-run immediately (no debounce)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    analyzeAbortRef.current?.abort();
+    const controller = new AbortController();
+    analyzeAbortRef.current = controller;
+
+    await doAnalyze(controller, effectiveRole, effectiveIndustry, geography, resume!);
   };
 
   const getFileIcon = (file: File) => {
@@ -719,7 +768,7 @@ export default function AnalyzePage() {
                   type="submit"
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
-                  Analyze My Career Path
+                  Analyze My Career Path ↗
                 </button>
                 <button
                   type="button"
