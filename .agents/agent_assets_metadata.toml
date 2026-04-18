@@ -6,3 +6,9 @@ id = "vBAj40vmaNZWbPsVnnnI4"
 uri = "file://AI_Career_Growth_Planner_Prompt.pdf"
 type = "pdf"
 title = "AI Career Growth Planner — Full Project Prompt"
+
+[[outputs]]
+id = "QqEKaHTuYYt6ujIkTWlBB"
+uri = "file://AI_Career_Growth_Planner_Test_Cases.pdf"
+type = "pdf"
+title = "AI Career Growth Planner — Test Case Document"
