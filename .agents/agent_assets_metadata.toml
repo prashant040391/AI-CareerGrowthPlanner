@@ -18,3 +18,9 @@ id = "qHwJ2kYO5S7OH9iV7zAF4"
 uri = "file://AI_Career_Growth_Planner_Test_Report.pdf"
 type = "pdf"
 title = "AI Career Growth Planner — Test Execution Report"
+
+[[outputs]]
+id = "jaAXj62Shz4DtnKC5npdP"
+uri = "file://AI_Career_Growth_Planner_Architecture.pdf"
+type = "pdf"
+title = "AI Career Growth Planner — Architecture Diagram"
