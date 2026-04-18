@@ -12,3 +12,9 @@ id = "QqEKaHTuYYt6ujIkTWlBB"
 uri = "file://AI_Career_Growth_Planner_Test_Cases.pdf"
 type = "pdf"
 title = "AI Career Growth Planner — Test Case Document"
+
+[[outputs]]
+id = "qHwJ2kYO5S7OH9iV7zAF4"
+uri = "file://AI_Career_Growth_Planner_Test_Report.pdf"
+type = "pdf"
+title = "AI Career Growth Planner — Test Execution Report"
