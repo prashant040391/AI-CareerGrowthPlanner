@@ -395,7 +395,7 @@ export default function AnalyzePage() {
             </svg>
             Back
           </button>
-          <span className="text-lg font-bold text-indigo-600">AI Career Growth Planner</span>
+          <span className="text-lg font-bold text-indigo-600">VeloCareer (Velocity + Career) - Fast Track Growth</span>
         </div>
       </div>
 
