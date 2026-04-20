@@ -89,7 +89,7 @@ export default function ResultsPage() {
               Home
             </button>
             <span className="text-gray-300">|</span>
-            <span className="text-lg font-bold text-indigo-600">AI Career Growth Planner</span>
+            <span className="text-lg font-bold text-indigo-600">VeloCareer (Velocity + Career) - Fast Track Growth</span>
           </div>
           <div className="flex items-center gap-3">
             <button
