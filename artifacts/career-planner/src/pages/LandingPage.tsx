@@ -8,7 +8,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold text-indigo-600 tracking-tight">VeloCareer (Velocity + Career) - Fast Track Growth</span>
+          <span className="text-lg font-bold text-indigo-600 tracking-tight">VeloCareer (Velocity + Career) - Accelerate Your Potential</span>
           <button
             onClick={() => navigate("/analyze")}
             className="bg-indigo-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
