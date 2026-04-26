@@ -9,12 +9,19 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <span className="text-lg font-bold text-indigo-600 tracking-tight">VeloCareer (Velocity + Career) - Accelerate Your Potential</span>
-          <button
-            onClick={() => navigate("/analyze")}
-            className="bg-indigo-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Get Started
-          </button>
+          <div className="flex flex-col items-end gap-1.5">
+            <img
+              src="/velocareer-logo.jpeg"
+              alt="VeloCareer"
+              className="h-10 w-auto rounded-lg object-contain"
+            />
+            <button
+              onClick={() => navigate("/analyze")}
+              className="bg-indigo-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Get Started
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -65,7 +72,7 @@ export default function LandingPage() {
                   </svg>
                 ),
                 title: "Upload Your Resume",
-                desc: "Upload your PDF resume. Our system extracts your work history, skills, and experience automatically.",
+                desc: "Upload your resume. Our system extracts your work history, skills, and experience automatically.",
               },
               {
                 step: "02",
@@ -75,7 +82,7 @@ export default function LandingPage() {
                   </svg>
                 ),
                 title: "Define Your Target Role",
-                desc: "Tell us where you want to go — your target job role, industry, and salary expectations.",
+                desc: "Tell us where you want to go — your target job role and industry.",
               },
               {
                 step: "03",
