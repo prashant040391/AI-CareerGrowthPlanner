@@ -155,6 +155,8 @@ interface ResumeSection {
 interface ResumeValidation {
   checking: boolean;
   valid: boolean | null;
+  rejected: boolean;
+  rejectionReason: string;
   sections: ResumeSection[];
   warnings: string[];
   error: string;
@@ -179,6 +181,8 @@ export default function AnalyzePage() {
   const [resumeValidation, setResumeValidation] = useState<ResumeValidation>({
     checking: false,
     valid: null,
+    rejected: false,
+    rejectionReason: "",
     sections: [],
     warnings: [],
     error: "",
@@ -219,19 +223,42 @@ export default function AnalyzePage() {
     setErrors((e) => ({ ...e, resume: "" }));
 
     // Immediately validate sections via API
-    setResumeValidation({ checking: true, valid: null, sections: [], warnings: [], error: "" });
+    setResumeValidation({ checking: true, valid: null, rejected: false, rejectionReason: "", sections: [], warnings: [], error: "" });
     const fd = new FormData();
     fd.append("resume", file);
     fetch(`${import.meta.env.BASE_URL}api/validate-resume`, { method: "POST", body: fd })
       .then(async (res) => {
-        const data = await res.json() as { error?: string; valid?: boolean; sections?: ResumeSection[]; warnings?: string[] };
+        const data = await res.json() as {
+          error?: string;
+          valid?: boolean;
+          rejected?: boolean;
+          rejectionReason?: string;
+          sections?: ResumeSection[];
+          warnings?: string[];
+        };
         if (!res.ok || data.error) {
-          setResumeValidation({ checking: false, valid: false, sections: [], warnings: [], error: data.error ?? "Could not validate file." });
+          setResumeValidation({ checking: false, valid: false, rejected: false, rejectionReason: "", sections: [], warnings: [], error: data.error ?? "Could not validate file." });
           setErrors((e) => ({ ...e, resume: data.error ?? "Could not validate file." }));
+        } else if (data.rejected) {
+          // Not a valid CV — clear the file and show rejection message
+          setResume(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          setResumeValidation({
+            checking: false,
+            valid: false,
+            rejected: true,
+            rejectionReason: data.rejectionReason ?? "This document does not appear to be a valid CV or resume.",
+            sections: [],
+            warnings: [],
+            error: "",
+          });
+          setErrors((e) => ({ ...e, resume: "" }));
         } else {
           setResumeValidation({
             checking: false,
             valid: data.valid ?? false,
+            rejected: false,
+            rejectionReason: "",
             sections: data.sections ?? [],
             warnings: data.warnings ?? [],
             error: "",
@@ -239,7 +266,7 @@ export default function AnalyzePage() {
         }
       })
       .catch(() => {
-        setResumeValidation({ checking: false, valid: null, sections: [], warnings: [], error: "" });
+        setResumeValidation({ checking: false, valid: null, rejected: false, rejectionReason: "", sections: [], warnings: [], error: "" });
       });
   };
 
@@ -264,7 +291,9 @@ export default function AnalyzePage() {
     const newErrors: Record<string, string> = {};
 
     // Resume
-    if (!resume) {
+    if (resumeValidation.rejected) {
+      newErrors.resume = "Please upload a valid CV or resume to continue.";
+    } else if (!resume) {
       newErrors.resume = "Please upload your resume (PDF, DOC, or DOCX)";
     } else if (resume.size === 0) {
       newErrors.resume = "The uploaded file is empty. Please select a valid resume file.";
@@ -314,7 +343,7 @@ export default function AnalyzePage() {
     setGeography("India");
     setErrors({});
     setApiError("");
-    setResumeValidation({ checking: false, valid: null, sections: [], warnings: [], error: "" });
+    setResumeValidation({ checking: false, valid: null, rejected: false, rejectionReason: "", sections: [], warnings: [], error: "" });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -508,15 +537,38 @@ export default function AnalyzePage() {
                   </p>
                 )}
 
-                {/* Live section checklist — shown immediately after upload */}
+                {/* Validation feedback — shown immediately after upload */}
                 {resumeValidation.checking && (
                   <div className="mt-3 flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2.5">
                     <span className="block w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin flex-shrink-0" />
-                    Checking resume sections…
+                    Checking document…
                   </div>
                 )}
 
-                {!resumeValidation.checking && resumeValidation.sections.length > 0 && (
+                {/* ── Rejection banner — document is not a CV ── */}
+                {!resumeValidation.checking && resumeValidation.rejected && (
+                  <div className="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                        <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-red-700 mb-1">Invalid document — not a CV or resume</p>
+                        <p className="text-xs text-red-600 leading-relaxed mb-3">
+                          {resumeValidation.rejectionReason}
+                        </p>
+                        <p className="text-xs text-red-500">
+                          A valid CV typically includes your name and contact details, work experience, education, and skills. Please upload your CV in <strong>PDF (.pdf)</strong> or <strong>Word (.doc / .docx)</strong> format.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Section checklist — document passed type check ── */}
+                {!resumeValidation.checking && !resumeValidation.rejected && resumeValidation.sections.length > 0 && (
                   <div className={`mt-3 rounded-lg border px-4 py-3 ${resumeValidation.valid ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
                     <p className={`text-xs font-semibold mb-2.5 ${resumeValidation.valid ? "text-green-700" : "text-amber-700"}`}>
                       Resume Section Check
