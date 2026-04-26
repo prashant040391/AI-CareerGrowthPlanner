@@ -305,15 +305,120 @@ interface SectionResult {
   hint: string;
 }
 
+type DocumentType = "cv" | "invoice" | "essay" | "certificate" | "other";
+
 interface ValidationResult {
   valid: boolean;
+  rejected: boolean;
+  rejectionReason?: string;
+  documentType: DocumentType;
   sections: SectionResult[];
   wordCount: number;
   warnings: string[];
 }
 
+function detectDocumentType(text: string): { type: DocumentType; rejected: boolean; reason?: string } {
+  // ── Invoice / billing document ──────────────────────────────────────────
+  const invoicePatterns = [
+    /invoice\s*(#|no\.?|number)/i,
+    /bill\s*to\s*:/i,
+    /amount\s*due/i,
+    /tax\s*invoice/i,
+    /payment\s*due\s*(date|by)/i,
+    /purchase\s*order/i,
+    /remit\s*payment/i,
+    /subtotal|grand\s*total/i,
+  ];
+  if (invoicePatterns.filter((r) => r.test(text)).length >= 2) {
+    return {
+      type: "invoice",
+      rejected: true,
+      reason:
+        "The uploaded document appears to be an invoice or billing statement. " +
+        "Please upload your CV or resume (PDF or Word format) to continue.",
+    };
+  }
+
+  // ── Certificate / award ─────────────────────────────────────────────────
+  const certPatterns = [
+    /this\s+is\s+to\s+certif/i,
+    /certificate\s+of\s+(completion|achievement|participation|excellence|award)/i,
+    /awarded\s+to/i,
+    /in\s+recognition\s+of/i,
+    /hereby\s+certif/i,
+    /has\s+successfully\s+completed/i,
+    /presented\s+to/i,
+  ];
+  if (certPatterns.filter((r) => r.test(text)).length >= 1) {
+    return {
+      type: "certificate",
+      rejected: true,
+      reason:
+        "The uploaded document appears to be a certificate or award, not a CV or resume. " +
+        "Please upload your CV or resume (PDF or Word format) to continue.",
+    };
+  }
+
+  // ── Essay / research paper / report ────────────────────────────────────
+  const essayPatterns = [
+    /\babstract\b/i,
+    /\bmethodology\b/i,
+    /\bconclusion\b/i,
+    /\breferences\b/i,
+    /\bbibliography\b/i,
+    /\bliterature\s*review\b/i,
+    /\bhypothesis\b/i,
+    /\bthesis\s*statement\b/i,
+  ];
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  if (essayPatterns.filter((r) => r.test(text)).length >= 3 && wordCount > 300) {
+    return {
+      type: "essay",
+      rejected: true,
+      reason:
+        "The uploaded document appears to be an essay, research paper, or report, not a CV or resume. " +
+        "Please upload your CV or resume (PDF or Word format) to continue.",
+    };
+  }
+
+  // ── Minimal / unrecognisable content ────────────────────────────────────
+  const cvSignals = [
+    /(work\s*experience|professional\s*experience|employment\s*history|career\s*history|experience)/i,
+    /(education|academic|qualifications?|university|college|degree|school)/i,
+    /(skills?|competenc|proficienc|expertise)/i,
+    /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i,
+    /(resume|curriculum\s*vitae|\bcv\b)/i,
+    /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s,]+\d{4}/i,
+  ];
+  if (cvSignals.filter((r) => r.test(text)).length === 0 && wordCount < 60) {
+    return {
+      type: "other",
+      rejected: true,
+      reason:
+        "The uploaded document does not appear to contain CV or resume content. " +
+        "Please upload your CV or resume (PDF or Word format) to continue.",
+    };
+  }
+
+  return { type: "cv", rejected: false };
+}
+
 function checkResumeSections(text: string): ValidationResult {
   const warnings: string[] = [];
+
+  // First detect document type — reject non-CV documents immediately
+  const { type, rejected, reason } = detectDocumentType(text);
+  if (rejected) {
+    return {
+      valid: false,
+      rejected: true,
+      rejectionReason: reason,
+      documentType: type,
+      sections: [],
+      wordCount: text.trim().split(/\s+/).filter(Boolean).length,
+      warnings: [],
+    };
+  }
 
   const sections: SectionResult[] = [
     {
@@ -350,7 +455,7 @@ function checkResumeSections(text: string): ValidationResult {
   const presentCount = sections.filter((s) => s.present).length;
   const valid = presentCount >= 3;
 
-  return { valid, sections, wordCount, warnings };
+  return { valid, rejected: false, documentType: "cv", sections, wordCount, warnings };
 }
 
 router.post("/validate-resume", upload.single("resume"), async (req, res): Promise<void> => {
@@ -437,6 +542,13 @@ router.post("/analyze", upload.single("resume"), async (req, res): Promise<void>
   } catch (err) {
     req.log.error({ err }, "File parse error");
     res.status(400).json({ error: "Failed to read the uploaded file. Please upload a valid, unprotected PDF or Word document." });
+    return;
+  }
+
+  // Reject non-CV documents before sending to AI
+  const { rejected: docRejected, reason: docReason } = detectDocumentType(resumeText);
+  if (docRejected) {
+    res.status(422).json({ error: docReason });
     return;
   }
 
