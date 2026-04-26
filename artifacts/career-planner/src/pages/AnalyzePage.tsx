@@ -769,7 +769,12 @@ export default function AnalyzePage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                  disabled={resumeValidation.rejected || resumeValidation.checking}
+                  className={`flex-1 font-semibold px-6 py-3.5 rounded-lg text-sm transition-all shadow-sm ${
+                    resumeValidation.rejected || resumeValidation.checking
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                      : "bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-md active:scale-[0.98]"
+                  }`}
                 >
                   Analyze My Career Path
                 </button>
